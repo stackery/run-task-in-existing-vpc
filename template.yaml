@@ -384,7 +384,7 @@ Resources:
     Properties:
       ServiceToken: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stackery-agent-commander
       Type: database
-      Data: arn:aws:rds:us-east-1:741950306968:db:ed5m9u3eo0ux18
+      Data: !Ref EnvConfigDBARNAsString
     Condition: databaseD817D70FUseExistingResource
 Parameters:
   StackTagName:
@@ -393,6 +393,9 @@ Parameters:
   EnvironmentTagName:
     Type: String
     Description: Environment Name (injected by Stackery at deployment time)
+  EnvConfigDBARNAsString:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /<EnvironmentName>/DB_ARN
 Conditions:
   virtualNetwork429D69EACreateNewResource: !Equals
     - 'false'
@@ -401,6 +404,9 @@ Conditions:
     - Condition: virtualNetwork429D69EACreateNewResource
   databaseD817D70FCreateNewResource: !Equals
     - 'false'
-    - 'true'
+    - !Ref EnvConfigDBARNAsString
   databaseD817D70FUseExistingResource: !Not
     - Condition: databaseD817D70FCreateNewResource
+Metadata:
+  EnvConfigParameters:
+    EnvConfigDBARNAsString: DB_ARN
