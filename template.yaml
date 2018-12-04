@@ -1,3 +1,396 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Transform: 'AWS::Serverless-2016-10-31'
-Resources: {}
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  virtualNetwork429D69EA:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName}
+            - ResourceName: virtualNetwork429D69EA
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPrivateSubnet1:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      CidrBlock: !Select
+        - 0
+        - !Cidr
+          - 10.0.0.0/16
+          - 4
+          - 14
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Private Subnet 1
+            - ResourceName: virtualNetwork429D69EA
+      VpcId: !Ref virtualNetwork429D69EA
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPrivateSubnet2:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs ''
+      CidrBlock: !Select
+        - 1
+        - !Cidr
+          - 10.0.0.0/16
+          - 4
+          - 14
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Private Subnet 2
+            - ResourceName: virtualNetwork429D69EA
+      VpcId: !Ref virtualNetwork429D69EA
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPublicSubnet1:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      CidrBlock: !Select
+        - 2
+        - !Cidr
+          - 10.0.0.0/16
+          - 4
+          - 14
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Public Subnet 1
+            - ResourceName: virtualNetwork429D69EA
+      VpcId: !Ref virtualNetwork429D69EA
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPublicSubnet2:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs ''
+      CidrBlock: !Select
+        - 3
+        - !Cidr
+          - 10.0.0.0/16
+          - 4
+          - 14
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Public Subnet 2
+            - ResourceName: virtualNetwork429D69EA
+      VpcId: !Ref virtualNetwork429D69EA
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPrivateSubnet1NatGatewayEIP:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPrivateSubnet1NatGateway:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt virtualNetwork429D69EAPrivateSubnet1NatGatewayEIP.AllocationId
+      SubnetId: !Ref virtualNetwork429D69EAPublicSubnet1
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPrivateSubnet1RouteTable:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Private Subnet 1 Route Table
+            - ResourceName: virtualNetwork429D69EA
+      VpcId: !Ref virtualNetwork429D69EA
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPrivateSubnet1NatGatewayRoute:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref virtualNetwork429D69EAPrivateSubnet1NatGateway
+      RouteTableId: !Ref virtualNetwork429D69EAPrivateSubnet1RouteTable
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPrivateSubnet1RouteTableAssociation:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref virtualNetwork429D69EAPrivateSubnet1RouteTable
+      SubnetId: !Ref virtualNetwork429D69EAPrivateSubnet1
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPrivateSubnet2NatGatewayEIP:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPrivateSubnet2NatGateway:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt virtualNetwork429D69EAPrivateSubnet2NatGatewayEIP.AllocationId
+      SubnetId: !Ref virtualNetwork429D69EAPublicSubnet2
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPrivateSubnet2RouteTable:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Private Subnet 2 Route Table
+            - ResourceName: virtualNetwork429D69EA
+      VpcId: !Ref virtualNetwork429D69EA
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPrivateSubnet2NatGatewayRoute:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref virtualNetwork429D69EAPrivateSubnet2NatGateway
+      RouteTableId: !Ref virtualNetwork429D69EAPrivateSubnet2RouteTable
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPrivateSubnet2RouteTableAssociation:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref virtualNetwork429D69EAPrivateSubnet2RouteTable
+      SubnetId: !Ref virtualNetwork429D69EAPrivateSubnet2
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPublicSubnetsInternetGateway:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Public Subnets Internet Gateway
+            - ResourceName: virtualNetwork429D69EA
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPublicSubnetsInternetGatewayAttachment:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref virtualNetwork429D69EAPublicSubnetsInternetGateway
+      VpcId: !Ref virtualNetwork429D69EA
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPublicSubnetsRouteTable:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Public Subnets Route Table
+            - ResourceName: virtualNetwork429D69EA
+      VpcId: !Ref virtualNetwork429D69EA
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPublicSubnetsInternetGatewayRoute:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref virtualNetwork429D69EAPublicSubnetsInternetGateway
+      RouteTableId: !Ref virtualNetwork429D69EAPublicSubnetsRouteTable
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPublicSubnet1RouteTableAssociation:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref virtualNetwork429D69EAPublicSubnetsRouteTable
+      SubnetId: !Ref virtualNetwork429D69EAPublicSubnet1
+    Condition: virtualNetwork429D69EACreateNewResource
+  virtualNetwork429D69EAPublicSubnet2RouteTableAssociation:
+    Metadata:
+      StackeryManaged: true
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref virtualNetwork429D69EAPublicSubnetsRouteTable
+      SubnetId: !Ref virtualNetwork429D69EAPublicSubnet2
+    Condition: virtualNetwork429D69EACreateNewResource
+  functionC5F55003:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-functionC5F55003
+      Description: !Sub
+        - Stack ${StackTagName} Environment ${EnvironmentTagName} Function ${ResourceName}
+        - ResourceName: functionC5F55003
+      CodeUri: src/functionC5F55003
+      Handler: index.handler
+      Runtime: nodejs8.10
+      MemorySize: 3008
+      Timeout: 30
+      Tracing: Active
+      Policies:
+        - AWSXrayWriteOnlyAccess
+        - AWSLambdaENIManagementAccess
+      VpcConfig:
+        SecurityGroupIds:
+          - !If
+            - virtualNetwork429D69EAUseExistingResource
+            - !GetAtt virtualNetwork429D69EAExistingResource.DefaultSecurityGroup
+            - !GetAtt virtualNetwork429D69EA.DefaultSecurityGroup
+        SubnetIds:
+          - !If
+            - virtualNetwork429D69EAUseExistingResource
+            - !GetAtt virtualNetwork429D69EAExistingResource.PrivateSubnet1
+            - !Ref virtualNetwork429D69EAPrivateSubnet1
+          - !If
+            - virtualNetwork429D69EAUseExistingResource
+            - !GetAtt virtualNetwork429D69EAExistingResource.PrivateSubnet2
+            - !Ref virtualNetwork429D69EAPrivateSubnet2
+      Environment:
+        Variables:
+          DB_INSTANCE: !If
+            - databaseD817D70FUseExistingResource
+            - !Ref databaseD817D70FExistingResource
+            - !Ref databaseD817D70F
+          DB_ADDRESS: !If
+            - databaseD817D70FUseExistingResource
+            - !GetAtt databaseD817D70FExistingResource.Endpoint.Address
+            - !GetAtt databaseD817D70F.Endpoint.Address
+          DB_PORT: !If
+            - databaseD817D70FUseExistingResource
+            - !GetAtt databaseD817D70FExistingResource.Endpoint.Port
+            - !GetAtt databaseD817D70F.Endpoint.Port
+          DB_ARN: !If
+            - databaseD817D70FUseExistingResource
+            - !Sub arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${databaseD817D70FExistingResource}
+            - !Sub arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${databaseD817D70F}
+  databaseD817D70F:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: '5'
+      AllowMajorVersionUpgrade: true
+      AutoMinorVersionUpgrade: true
+      BackupRetentionPeriod: '0'
+      CopyTagsToSnapshot: true
+      DBInstanceClass: db.t2.micro
+      DBSubnetGroupName: !Ref databaseD817D70FSubnetGroup
+      Engine: postgres
+      EngineVersion: '10.3'
+      MasterUsername: root
+      MasterUserPassword: ''
+      MultiAZ: false
+      PubliclyAccessible: false
+      StorageType: gp2
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - Stack ${StackTagName} Environment ${EnvironmentTagName} Database ${ResourceName}
+            - ResourceName: databaseD817D70F
+      VPCSecurityGroups:
+        - !Ref databaseD817D70FSecurityGroup
+    Condition: databaseD817D70FCreateNewResource
+  databaseD817D70FSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: !Sub
+        - Stack ${StackTagName} Environment ${EnvironmentTagName} Database ${ResourceName} VPC Subnets
+        - ResourceName: databaseD817D70F
+      SubnetIds:
+        - !If
+          - virtualNetwork429D69EAUseExistingResource
+          - !GetAtt virtualNetwork429D69EAExistingResource.PrivateSubnet1
+          - !Ref virtualNetwork429D69EAPrivateSubnet1
+        - !If
+          - virtualNetwork429D69EAUseExistingResource
+          - !GetAtt virtualNetwork429D69EAExistingResource.PrivateSubnet2
+          - !Ref virtualNetwork429D69EAPrivateSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - Stack ${StackTagName} Environment ${EnvironmentTagName} Database ${ResourceName} VPC Subnets
+            - ResourceName: databaseD817D70F
+    Condition: databaseD817D70FCreateNewResource
+  databaseD817D70FSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Database Security Group
+      SecurityGroupIngress:
+        CidrIp: 0.0.0.0/0
+        FromPort: 5432
+        IpProtocol: tcp
+        ToPort: 5432
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - Stack ${StackTagName} Environment ${EnvironmentTagName} Database ${ResourceName} VPC Security Group
+            - ResourceName: databaseD817D70F
+      VpcId: !If
+        - virtualNetwork429D69EAUseExistingResource
+        - !Ref virtualNetwork429D69EAExistingResource
+        - !Ref virtualNetwork429D69EA
+    Condition: databaseD817D70FCreateNewResource
+  virtualNetwork429D69EAExistingResource:
+    Type: Custom::StackeryExistingResource
+    Properties:
+      ServiceToken: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stackery-agent-commander
+      Type: virtualNetwork
+      Data:
+        VpcId: vpc-0d5fb2aaaf0a6c7ea
+        DefaultPublicSubnetIds:
+          - subnet-0d424855c6c4bf3b2
+          - subnet-009495e72cc572a1a
+        DefaultPrivateSubnetIds:
+          - subnet-0c0b4e03bfaead595
+          - subnet-03c73b9dfbdb166a4
+    Condition: virtualNetwork429D69EAUseExistingResource
+  databaseD817D70FExistingResource:
+    Type: Custom::StackeryExistingResource
+    Properties:
+      ServiceToken: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stackery-agent-commander
+      Type: database
+      Data: arn:aws:rds:us-east-1:741950306968:db:ed5m9u3eo0ux18
+    Condition: databaseD817D70FUseExistingResource
+Parameters:
+  StackTagName:
+    Type: String
+    Description: Stack Name (injected by Stackery at deployment time)
+  EnvironmentTagName:
+    Type: String
+    Description: Environment Name (injected by Stackery at deployment time)
+Conditions:
+  virtualNetwork429D69EACreateNewResource: !Equals
+    - 'false'
+    - 'true'
+  virtualNetwork429D69EAUseExistingResource: !Not
+    - Condition: virtualNetwork429D69EACreateNewResource
+  databaseD817D70FCreateNewResource: !Equals
+    - 'false'
+    - 'true'
+  databaseD817D70FUseExistingResource: !Not
+    - Condition: databaseD817D70FCreateNewResource
