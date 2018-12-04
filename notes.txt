@@ -1,0 +1,4 @@
+stackery invoke -n run-task-in-existing-vpc -e production --function-id=functionC5F55003 --input={} --aws-profile reinvent
+
+stackery deploy --stack-name=run-task-in-existing-vpc --env-name=production --git-ref=master  --aws-profile=reinvent
+
