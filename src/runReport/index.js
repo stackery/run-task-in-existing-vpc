@@ -21,7 +21,7 @@ exports.handler = async message => {
   const postgresPassword = response.SecretString;
 
   // In real life NEVER log passwords
-  console.log(postgresPassword);
+  console.log(`PASSWORD STARTS WITH: ${postgresPassword.slice(0, 1)}`);
 
   return {};
 };
