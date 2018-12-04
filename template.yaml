@@ -371,6 +371,7 @@ Resources:
     Properties:
       ServiceToken: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stackery-agent-commander
       Type: database
+      Data: !Ref EnvConfigDBARNAsString
     Condition: databaseAEA12019UseExistingResource
   virtualNetwork135E7282ExistingResource:
     Type: Custom::StackeryExistingResource
@@ -389,10 +390,13 @@ Parameters:
   EnvConfigVPCConfigAsString:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /<EnvironmentName>/VPC_Config
+  EnvConfigDBARNAsString:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /<EnvironmentName>/DB_ARN
 Conditions:
   databaseAEA12019CreateNewResource: !Equals
     - 'false'
-    - 'false'
+    - !Ref EnvConfigDBARNAsString
   databaseAEA12019UseExistingResource: !Not
     - Condition: databaseAEA12019CreateNewResource
   virtualNetwork135E7282CreateNewResource: !Equals
@@ -403,3 +407,4 @@ Conditions:
 Metadata:
   EnvConfigParameters:
     EnvConfigVPCConfigAsString: VPC_Config
+    EnvConfigDBARNAsString: DB_ARN
