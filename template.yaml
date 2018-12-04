@@ -248,7 +248,7 @@ Resources:
       Description: !Sub
         - Stack ${StackTagName} Environment ${EnvironmentTagName} Function ${ResourceName}
         - ResourceName: functionC5F55003
-      CodeUri: src/functionC5F55003
+      CodeUri: src/runReport
       Handler: index.handler
       Runtime: nodejs8.10
       MemorySize: 3008
@@ -290,6 +290,13 @@ Resources:
             - databaseD817D70FUseExistingResource
             - !Sub arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${databaseD817D70FExistingResource}
             - !Sub arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${databaseD817D70F}
+      Events:
+        timerF0088E27:
+          Type: Schedule
+          Properties:
+            Schedule: rate(30 minutes)
+          Metadata:
+            StackeryName: 30 minutes
   databaseD817D70F:
     Type: AWS::RDS::DBInstance
     Properties:
