@@ -257,6 +257,8 @@ Resources:
       Policies:
         - AWSXrayWriteOnlyAccess
         - AWSLambdaENIManagementAccess
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/${EnvironmentTagName}/*
       VpcConfig:
         SecurityGroupIds:
           - !If
@@ -290,6 +292,7 @@ Resources:
             - databaseD817D70FUseExistingResource
             - !Sub arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${databaseD817D70FExistingResource}
             - !Sub arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${databaseD817D70F}
+          SECRETS_NAMESPACE: !Sub /${EnvironmentTagName}/
       Events:
         timerF0088E27:
           Type: Schedule
