@@ -69,8 +69,10 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName}
-            - ResourceName: virtualNetwork135E7282
+            - ResourceName: ExistingVPC
     Condition: virtualNetwork135E7282CreateNewResource
+    Metadata:
+      StackeryName: ExistingVPC
   virtualNetwork135E7282PrivateSubnet1:
     Metadata:
       StackeryManaged: true
@@ -89,7 +91,7 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Private Subnet 1
-            - ResourceName: virtualNetwork135E7282
+            - ResourceName: ExistingVPC
       VpcId: !Ref virtualNetwork135E7282
     Condition: virtualNetwork135E7282CreateNewResource
   virtualNetwork135E7282PrivateSubnet2:
@@ -110,7 +112,7 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Private Subnet 2
-            - ResourceName: virtualNetwork135E7282
+            - ResourceName: ExistingVPC
       VpcId: !Ref virtualNetwork135E7282
     Condition: virtualNetwork135E7282CreateNewResource
   virtualNetwork135E7282PublicSubnet1:
@@ -132,7 +134,7 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Public Subnet 1
-            - ResourceName: virtualNetwork135E7282
+            - ResourceName: ExistingVPC
       VpcId: !Ref virtualNetwork135E7282
     Condition: virtualNetwork135E7282CreateNewResource
   virtualNetwork135E7282PublicSubnet2:
@@ -154,7 +156,7 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Public Subnet 2
-            - ResourceName: virtualNetwork135E7282
+            - ResourceName: ExistingVPC
       VpcId: !Ref virtualNetwork135E7282
     Condition: virtualNetwork135E7282CreateNewResource
   virtualNetwork135E7282PrivateSubnet1NatGatewayEIP:
@@ -181,7 +183,7 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Private Subnet 1 Route Table
-            - ResourceName: virtualNetwork135E7282
+            - ResourceName: ExistingVPC
       VpcId: !Ref virtualNetwork135E7282
     Condition: virtualNetwork135E7282CreateNewResource
   virtualNetwork135E7282PrivateSubnet1NatGatewayRoute:
@@ -225,7 +227,7 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Private Subnet 2 Route Table
-            - ResourceName: virtualNetwork135E7282
+            - ResourceName: ExistingVPC
       VpcId: !Ref virtualNetwork135E7282
     Condition: virtualNetwork135E7282CreateNewResource
   virtualNetwork135E7282PrivateSubnet2NatGatewayRoute:
@@ -254,7 +256,7 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Public Subnets Internet Gateway
-            - ResourceName: virtualNetwork135E7282
+            - ResourceName: ExistingVPC
     Condition: virtualNetwork135E7282CreateNewResource
   virtualNetwork135E7282PublicSubnetsInternetGatewayAttachment:
     Metadata:
@@ -273,7 +275,7 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Public Subnets Route Table
-            - ResourceName: virtualNetwork135E7282
+            - ResourceName: ExistingVPC
       VpcId: !Ref virtualNetwork135E7282
     Condition: virtualNetwork135E7282CreateNewResource
   virtualNetwork135E7282PublicSubnetsInternetGatewayRoute:
@@ -311,8 +313,8 @@ Resources:
       CopyTagsToSnapshot: true
       DBInstanceClass: db.t2.micro
       DBSubnetGroupName: !Ref databaseAEA12019SubnetGroup
-      Engine: mariadb
-      EngineVersion: '10.2'
+      Engine: postgres
+      EngineVersion: '10.3'
       MasterUsername: root
       MasterUserPassword: ''
       MultiAZ: false
@@ -322,10 +324,12 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Database ${ResourceName}
-            - ResourceName: databaseAEA12019
+            - ResourceName: ExistingDatabase
       VPCSecurityGroups:
         - !Ref databaseAEA12019SecurityGroup
     Condition: databaseAEA12019CreateNewResource
+    Metadata:
+      StackeryName: ExistingDatabase
   databaseAEA12019SubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
@@ -353,14 +357,14 @@ Resources:
       GroupDescription: Database Security Group
       SecurityGroupIngress:
         CidrIp: 0.0.0.0/0
-        FromPort: 3306
+        FromPort: 5432
         IpProtocol: tcp
-        ToPort: 3306
+        ToPort: 5432
       Tags:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Database ${ResourceName} VPC Security Group
-            - ResourceName: databaseAEA12019
+            - ResourceName: ExistingDatabase
       VpcId: !If
         - virtualNetwork135E7282UseExistingResource
         - !Ref virtualNetwork135E7282ExistingResource
