@@ -8,7 +8,7 @@ Resources:
       Description: !Sub
         - Stack ${StackTagName} Environment ${EnvironmentTagName} Function ${ResourceName}
         - ResourceName: runReport
-      CodeUri: src/runReport
+      CodeUri: src/runReport2
       Handler: index.handler
       Runtime: nodejs8.10
       MemorySize: 3008
