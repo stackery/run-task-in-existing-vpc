@@ -12,7 +12,7 @@ exports.handler = async message => {
   });
 
   const rows = await new Promise((resolve, reject) => {
-    connection.query('SELECT * FROM items', (err, rows) => {
+    connection.query('SHOW TABLES', (err, rows) => {
       if (err) {
         reject(err);
       } else {
