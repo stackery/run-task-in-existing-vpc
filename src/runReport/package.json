@@ -1,6 +1,7 @@
 {
   "private": true,
   "dependencies": {
-    "aws-sdk": "~2"
+    "aws-sdk": "~2",
+    "mysql": "^2.16.0"
   }
 }
