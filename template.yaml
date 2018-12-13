@@ -19,13 +19,6 @@ Resources:
         - AWSLambdaENIManagementAccess
         - AWSSecretsManagerGetSecretValuePolicy:
             SecretArn: !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/${EnvironmentTagName}/*
-      Events:
-        api58EC5817GET:
-          Type: Api
-          Properties:
-            Path: /foo
-            Method: GET
-            RestApiId: !Ref api58EC5817
       VpcConfig:
         SecurityGroupIds:
           - !If
