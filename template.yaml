@@ -53,27 +53,13 @@ Resources:
             - !Sub arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${database43225001ExistingResource}
             - !Sub arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${database43225001}
           SECRETS_NAMESPACE: !Sub /${EnvironmentTagName}/
+      Events:
+        timer1FAB5E1C:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 minute)
     Metadata:
       StackeryName: runReport
-  api58EC5817:
-    Type: AWS::Serverless::Api
-    Properties:
-      Name: !Sub
-        - ${ResourceName} From Stack ${StackTagName} Environment ${EnvironmentTagName}
-        - ResourceName: api58EC5817
-      StageName: !Ref EnvironmentAPIGatewayStageName
-      DefinitionBody:
-        openapi: '3.0'
-        info: {}
-        paths:
-          /foo:
-            get:
-              x-amazon-apigateway-integration:
-                httpMethod: POST
-                type: aws_proxy
-                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${function5CEDBB34.Arn}/invocations
-              responses: {}
-      EndpointConfiguration: REGIONAL
   virtualNetworkA4A5C96F:
     Type: AWS::EC2::VPC
     Properties:
@@ -398,9 +384,6 @@ Parameters:
   EnvironmentTagName:
     Type: String
     Description: Environment Name (injected by Stackery at deployment time)
-  EnvironmentAPIGatewayStageName:
-    Type: String
-    Description: Environment name used for API Gateway Stage names (injected by Stackery at deployment time)
 Conditions:
   database43225001CreateNewResource: !Equals
     - 'false'
