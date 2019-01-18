@@ -17,6 +17,8 @@ Resources:
       Policies:
         - AWSXrayWriteOnlyAccess
         - AWSLambdaENIManagementAccess
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/${EnvironmentTagName}/*
       Events:
         timer6C97BED9:
           Type: Schedule
@@ -56,6 +58,7 @@ Resources:
             - !Sub arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${databaseADBEA118ExistingResource}
             - !Sub arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${databaseADBEA118}
           MyVar: '1'
+          SECRETS_NAMESPACE: !Sub /${EnvironmentTagName}/
     Metadata:
       StackeryName: myFunction
   virtualNetwork88E7FFCC:
