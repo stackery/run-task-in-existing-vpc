@@ -1,14 +1,14 @@
 AWSTemplateFormatVersion: 2010-09-09
 Transform: AWS::Serverless-2016-10-31
 Resources:
-  functionF582E1C5:
+  myReportingFunction2:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${AWS::StackName}-functionF582E1C5
+      FunctionName: !Sub ${AWS::StackName}-myReportingFunction
       Description: !Sub
-        - Stack ${StackTagName} Environment ${EnvironmentTagName} Function ${ResourceName}
-        - ResourceName: myFunction
-      CodeUri: src/myCode2
+        - Stack ${StackTagName} Environment ${EnvironmentTagName} myReportingFunction ${ResourceName}
+        - ResourceName: myReportingFunction2
+      CodeUri: src/myReportingFunction
       Handler: index.handler
       Runtime: nodejs8.10
       MemorySize: 128
@@ -20,48 +20,66 @@ Resources:
         - AWSSecretsManagerGetSecretValuePolicy:
             SecretArn: !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/${EnvironmentTagName}/*
       Events:
-        timer6C97BED9:
-          Type: Schedule
+        ApiGET:
+          Type: Api
           Properties:
-            Schedule: rate(12 hours)
+            Path: /
+            Method: GET
+            RestApiId: !Ref Api
       VpcConfig:
         SecurityGroupIds:
           - !If
-            - virtualNetwork88E7FFCCUseExistingResource
-            - !GetAtt virtualNetwork88E7FFCCExistingResource.DefaultSecurityGroup
-            - !GetAtt virtualNetwork88E7FFCC.DefaultSecurityGroup
+            - VirtualNetworkUseExistingResource
+            - !GetAtt VirtualNetworkExistingResource.DefaultSecurityGroup
+            - !GetAtt VirtualNetwork.DefaultSecurityGroup
         SubnetIds:
           - !If
-            - virtualNetwork88E7FFCCUseExistingResource
-            - !GetAtt virtualNetwork88E7FFCCExistingResource.PrivateSubnet1
-            - !Ref virtualNetwork88E7FFCCPrivateSubnet1
+            - VirtualNetworkUseExistingResource
+            - !GetAtt VirtualNetworkExistingResource.PrivateSubnet1
+            - !Ref VirtualNetworkPrivateSubnet1
           - !If
-            - virtualNetwork88E7FFCCUseExistingResource
-            - !GetAtt virtualNetwork88E7FFCCExistingResource.PrivateSubnet2
-            - !Ref virtualNetwork88E7FFCCPrivateSubnet2
+            - VirtualNetworkUseExistingResource
+            - !GetAtt VirtualNetworkExistingResource.PrivateSubnet2
+            - !Ref VirtualNetworkPrivateSubnet2
       Environment:
         Variables:
           DB_INSTANCE: !If
-            - databaseADBEA118UseExistingResource
-            - !Ref databaseADBEA118ExistingResource
-            - !Ref databaseADBEA118
+            - DatabaseUseExistingResource
+            - !Ref DatabaseExistingResource
+            - !Ref Database
           DB_ADDRESS: !If
-            - databaseADBEA118UseExistingResource
-            - !GetAtt databaseADBEA118ExistingResource.Endpoint.Address
-            - !GetAtt databaseADBEA118.Endpoint.Address
+            - DatabaseUseExistingResource
+            - !GetAtt DatabaseExistingResource.Endpoint.Address
+            - !GetAtt Database.Endpoint.Address
           DB_PORT: !If
-            - databaseADBEA118UseExistingResource
-            - !GetAtt databaseADBEA118ExistingResource.Endpoint.Port
-            - !GetAtt databaseADBEA118.Endpoint.Port
-          DB_ARN_FOO: !If
-            - databaseADBEA118UseExistingResource
-            - !Sub arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${databaseADBEA118ExistingResource}
-            - !Sub arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${databaseADBEA118}
-          MyVar: '1'
+            - DatabaseUseExistingResource
+            - !GetAtt DatabaseExistingResource.Endpoint.Port
+            - !GetAtt Database.Endpoint.Port
+          DB_ARN: !If
+            - DatabaseUseExistingResource
+            - !Sub arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${DatabaseExistingResource}
+            - !Sub arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${Database}
           SECRETS_NAMESPACE: !Sub /${EnvironmentTagName}/
-    Metadata:
-      StackeryName: myFunction
-  virtualNetwork88E7FFCC:
+  Api:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub
+        - ${ResourceName} From Stack ${StackTagName} Environment ${EnvironmentTagName}
+        - ResourceName: Api
+      StageName: !Ref EnvironmentAPIGatewayStageName
+      DefinitionBody:
+        swagger: '2.0'
+        info: {}
+        paths:
+          /:
+            get:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${myReportingFunction2.Arn}/invocations
+              responses: {}
+      EndpointConfiguration: REGIONAL
+  VirtualNetwork:
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: 10.0.0.0/16
@@ -69,9 +87,9 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName}
-            - ResourceName: virtualNetwork88E7FFCC
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPrivateSubnet1:
+            - ResourceName: VirtualNetwork
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPrivateSubnet1:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::Subnet
@@ -89,10 +107,10 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Private Subnet 1
-            - ResourceName: virtualNetwork88E7FFCC
-      VpcId: !Ref virtualNetwork88E7FFCC
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPrivateSubnet2:
+            - ResourceName: VirtualNetwork
+      VpcId: !Ref VirtualNetwork
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPrivateSubnet2:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::Subnet
@@ -110,10 +128,10 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Private Subnet 2
-            - ResourceName: virtualNetwork88E7FFCC
-      VpcId: !Ref virtualNetwork88E7FFCC
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPublicSubnet1:
+            - ResourceName: VirtualNetwork
+      VpcId: !Ref VirtualNetwork
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPublicSubnet1:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::Subnet
@@ -132,10 +150,10 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Public Subnet 1
-            - ResourceName: virtualNetwork88E7FFCC
-      VpcId: !Ref virtualNetwork88E7FFCC
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPublicSubnet2:
+            - ResourceName: VirtualNetwork
+      VpcId: !Ref VirtualNetwork
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPublicSubnet2:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::Subnet
@@ -154,25 +172,25 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Public Subnet 2
-            - ResourceName: virtualNetwork88E7FFCC
-      VpcId: !Ref virtualNetwork88E7FFCC
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPrivateSubnet1NatGatewayEIP:
+            - ResourceName: VirtualNetwork
+      VpcId: !Ref VirtualNetwork
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPrivateSubnet1NatGatewayEIP:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPrivateSubnet1NatGateway:
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPrivateSubnet1NatGateway:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::NatGateway
     Properties:
-      AllocationId: !GetAtt virtualNetwork88E7FFCCPrivateSubnet1NatGatewayEIP.AllocationId
-      SubnetId: !Ref virtualNetwork88E7FFCCPublicSubnet1
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPrivateSubnet1RouteTable:
+      AllocationId: !GetAtt VirtualNetworkPrivateSubnet1NatGatewayEIP.AllocationId
+      SubnetId: !Ref VirtualNetworkPublicSubnet1
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPrivateSubnet1RouteTable:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::RouteTable
@@ -181,42 +199,42 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Private Subnet 1 Route Table
-            - ResourceName: virtualNetwork88E7FFCC
-      VpcId: !Ref virtualNetwork88E7FFCC
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPrivateSubnet1NatGatewayRoute:
+            - ResourceName: VirtualNetwork
+      VpcId: !Ref VirtualNetwork
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPrivateSubnet1NatGatewayRoute:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref virtualNetwork88E7FFCCPrivateSubnet1NatGateway
-      RouteTableId: !Ref virtualNetwork88E7FFCCPrivateSubnet1RouteTable
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPrivateSubnet1RouteTableAssociation:
+      NatGatewayId: !Ref VirtualNetworkPrivateSubnet1NatGateway
+      RouteTableId: !Ref VirtualNetworkPrivateSubnet1RouteTable
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPrivateSubnet1RouteTableAssociation:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref virtualNetwork88E7FFCCPrivateSubnet1RouteTable
-      SubnetId: !Ref virtualNetwork88E7FFCCPrivateSubnet1
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPrivateSubnet2NatGatewayEIP:
+      RouteTableId: !Ref VirtualNetworkPrivateSubnet1RouteTable
+      SubnetId: !Ref VirtualNetworkPrivateSubnet1
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPrivateSubnet2NatGatewayEIP:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPrivateSubnet2NatGateway:
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPrivateSubnet2NatGateway:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::NatGateway
     Properties:
-      AllocationId: !GetAtt virtualNetwork88E7FFCCPrivateSubnet2NatGatewayEIP.AllocationId
-      SubnetId: !Ref virtualNetwork88E7FFCCPublicSubnet2
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPrivateSubnet2RouteTable:
+      AllocationId: !GetAtt VirtualNetworkPrivateSubnet2NatGatewayEIP.AllocationId
+      SubnetId: !Ref VirtualNetworkPublicSubnet2
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPrivateSubnet2RouteTable:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::RouteTable
@@ -225,27 +243,27 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Private Subnet 2 Route Table
-            - ResourceName: virtualNetwork88E7FFCC
-      VpcId: !Ref virtualNetwork88E7FFCC
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPrivateSubnet2NatGatewayRoute:
+            - ResourceName: VirtualNetwork
+      VpcId: !Ref VirtualNetwork
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPrivateSubnet2NatGatewayRoute:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref virtualNetwork88E7FFCCPrivateSubnet2NatGateway
-      RouteTableId: !Ref virtualNetwork88E7FFCCPrivateSubnet2RouteTable
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPrivateSubnet2RouteTableAssociation:
+      NatGatewayId: !Ref VirtualNetworkPrivateSubnet2NatGateway
+      RouteTableId: !Ref VirtualNetworkPrivateSubnet2RouteTable
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPrivateSubnet2RouteTableAssociation:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref virtualNetwork88E7FFCCPrivateSubnet2RouteTable
-      SubnetId: !Ref virtualNetwork88E7FFCCPrivateSubnet2
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPublicSubnetsInternetGateway:
+      RouteTableId: !Ref VirtualNetworkPrivateSubnet2RouteTable
+      SubnetId: !Ref VirtualNetworkPrivateSubnet2
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPublicSubnetsInternetGateway:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::InternetGateway
@@ -254,17 +272,17 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Public Subnets Internet Gateway
-            - ResourceName: virtualNetwork88E7FFCC
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPublicSubnetsInternetGatewayAttachment:
+            - ResourceName: VirtualNetwork
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPublicSubnetsInternetGatewayAttachment:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
-      InternetGatewayId: !Ref virtualNetwork88E7FFCCPublicSubnetsInternetGateway
-      VpcId: !Ref virtualNetwork88E7FFCC
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPublicSubnetsRouteTable:
+      InternetGatewayId: !Ref VirtualNetworkPublicSubnetsInternetGateway
+      VpcId: !Ref VirtualNetwork
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPublicSubnetsRouteTable:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::RouteTable
@@ -273,35 +291,35 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Public Subnets Route Table
-            - ResourceName: virtualNetwork88E7FFCC
-      VpcId: !Ref virtualNetwork88E7FFCC
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPublicSubnetsInternetGatewayRoute:
+            - ResourceName: VirtualNetwork
+      VpcId: !Ref VirtualNetwork
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPublicSubnetsInternetGatewayRoute:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref virtualNetwork88E7FFCCPublicSubnetsInternetGateway
-      RouteTableId: !Ref virtualNetwork88E7FFCCPublicSubnetsRouteTable
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPublicSubnet1RouteTableAssociation:
+      GatewayId: !Ref VirtualNetworkPublicSubnetsInternetGateway
+      RouteTableId: !Ref VirtualNetworkPublicSubnetsRouteTable
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPublicSubnet1RouteTableAssociation:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref virtualNetwork88E7FFCCPublicSubnetsRouteTable
-      SubnetId: !Ref virtualNetwork88E7FFCCPublicSubnet1
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  virtualNetwork88E7FFCCPublicSubnet2RouteTableAssociation:
+      RouteTableId: !Ref VirtualNetworkPublicSubnetsRouteTable
+      SubnetId: !Ref VirtualNetworkPublicSubnet1
+    Condition: VirtualNetworkCreateNewResource
+  VirtualNetworkPublicSubnet2RouteTableAssociation:
     Metadata:
       StackeryManaged: true
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref virtualNetwork88E7FFCCPublicSubnetsRouteTable
-      SubnetId: !Ref virtualNetwork88E7FFCCPublicSubnet2
-    Condition: virtualNetwork88E7FFCCCreateNewResource
-  databaseADBEA118:
+      RouteTableId: !Ref VirtualNetworkPublicSubnetsRouteTable
+      SubnetId: !Ref VirtualNetworkPublicSubnet2
+    Condition: VirtualNetworkCreateNewResource
+  Database:
     Type: AWS::RDS::DBInstance
     Properties:
       AllocatedStorage: '5'
@@ -310,7 +328,7 @@ Resources:
       BackupRetentionPeriod: '0'
       CopyTagsToSnapshot: true
       DBInstanceClass: db.t2.micro
-      DBSubnetGroupName: !Ref databaseADBEA118SubnetGroup
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
       Engine: mariadb
       EngineVersion: '10.2'
       MasterUsername: root
@@ -322,32 +340,32 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Database ${ResourceName}
-            - ResourceName: databaseADBEA118
+            - ResourceName: Database
       VPCSecurityGroups:
-        - !Ref databaseADBEA118SecurityGroup
-    Condition: databaseADBEA118CreateNewResource
-  databaseADBEA118SubnetGroup:
+        - !Ref DatabaseSecurityGroup
+    Condition: DatabaseCreateNewResource
+  DatabaseSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
       DBSubnetGroupDescription: !Sub
         - Stack ${StackTagName} Environment ${EnvironmentTagName} Database ${ResourceName} VPC Subnets
-        - ResourceName: databaseADBEA118
+        - ResourceName: Database
       SubnetIds:
         - !If
-          - virtualNetwork88E7FFCCUseExistingResource
-          - !GetAtt virtualNetwork88E7FFCCExistingResource.PrivateSubnet1
-          - !Ref virtualNetwork88E7FFCCPrivateSubnet1
+          - VirtualNetworkUseExistingResource
+          - !GetAtt VirtualNetworkExistingResource.PrivateSubnet1
+          - !Ref VirtualNetworkPrivateSubnet1
         - !If
-          - virtualNetwork88E7FFCCUseExistingResource
-          - !GetAtt virtualNetwork88E7FFCCExistingResource.PrivateSubnet2
-          - !Ref virtualNetwork88E7FFCCPrivateSubnet2
+          - VirtualNetworkUseExistingResource
+          - !GetAtt VirtualNetworkExistingResource.PrivateSubnet2
+          - !Ref VirtualNetworkPrivateSubnet2
       Tags:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Database ${ResourceName} VPC Subnets
-            - ResourceName: databaseADBEA118
-    Condition: databaseADBEA118CreateNewResource
-  databaseADBEA118SecurityGroup:
+            - ResourceName: Database
+    Condition: DatabaseCreateNewResource
+  DatabaseSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Database Security Group
@@ -360,26 +378,26 @@ Resources:
         - Key: Name
           Value: !Sub
             - Stack ${StackTagName} Environment ${EnvironmentTagName} Database ${ResourceName} VPC Security Group
-            - ResourceName: databaseADBEA118
+            - ResourceName: Database
       VpcId: !If
-        - virtualNetwork88E7FFCCUseExistingResource
-        - !Ref virtualNetwork88E7FFCCExistingResource
-        - !Ref virtualNetwork88E7FFCC
-    Condition: databaseADBEA118CreateNewResource
-  virtualNetwork88E7FFCCExistingResource:
-    Type: Custom::StackeryExistingResource
-    Properties:
-      ServiceToken: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stackery-agent-commander
-      Type: virtualNetwork
-      Data: !Ref EnvConfigVPCConfigAsString
-    Condition: virtualNetwork88E7FFCCUseExistingResource
-  databaseADBEA118ExistingResource:
+        - VirtualNetworkUseExistingResource
+        - !Ref VirtualNetworkExistingResource
+        - !Ref VirtualNetwork
+    Condition: DatabaseCreateNewResource
+  DatabaseExistingResource:
     Type: Custom::StackeryExistingResource
     Properties:
       ServiceToken: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stackery-agent-commander
       Type: database
       Data: !Ref EnvConfigDBARNAsString
-    Condition: databaseADBEA118UseExistingResource
+    Condition: DatabaseUseExistingResource
+  VirtualNetworkExistingResource:
+    Type: Custom::StackeryExistingResource
+    Properties:
+      ServiceToken: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stackery-agent-commander
+      Type: virtualNetwork
+      Data: !Ref EnvConfigVPCConfigAsString
+    Condition: VirtualNetworkUseExistingResource
 Parameters:
   StackTagName:
     Type: String
@@ -387,24 +405,27 @@ Parameters:
   EnvironmentTagName:
     Type: String
     Description: Environment Name (injected by Stackery at deployment time)
-  EnvConfigVPCConfigAsString:
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /<EnvironmentName>/VPC_Config
+  EnvironmentAPIGatewayStageName:
+    Type: String
+    Description: Environment name used for API Gateway Stage names (injected by Stackery at deployment time)
   EnvConfigDBARNAsString:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /<EnvironmentName>/DB_ARN
+  EnvConfigVPCConfigAsString:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /<EnvironmentName>/VPC_Config
 Conditions:
-  virtualNetwork88E7FFCCCreateNewResource: !Equals
-    - 'false'
-    - !Ref EnvConfigVPCConfigAsString
-  virtualNetwork88E7FFCCUseExistingResource: !Not
-    - Condition: virtualNetwork88E7FFCCCreateNewResource
-  databaseADBEA118CreateNewResource: !Equals
+  DatabaseCreateNewResource: !Equals
     - 'false'
     - !Ref EnvConfigDBARNAsString
-  databaseADBEA118UseExistingResource: !Not
-    - Condition: databaseADBEA118CreateNewResource
+  DatabaseUseExistingResource: !Not
+    - Condition: DatabaseCreateNewResource
+  VirtualNetworkCreateNewResource: !Equals
+    - 'false'
+    - !Ref EnvConfigVPCConfigAsString
+  VirtualNetworkUseExistingResource: !Not
+    - Condition: VirtualNetworkCreateNewResource
 Metadata:
   EnvConfigParameters:
-    EnvConfigVPCConfigAsString: VPC_Config
     EnvConfigDBARNAsString: DB_ARN
+    EnvConfigVPCConfigAsString: VPC_Config
