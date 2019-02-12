@@ -1,403 +1,179 @@
 AWSTemplateFormatVersion: 2010-09-09
 Transform: AWS::Serverless-2016-10-31
 Resources:
-  myReportingFunction2:
-    Type: AWS::Serverless::Function
+  Queue:
+    Type: AWS::SQS::Queue
     Properties:
-      FunctionName: !Sub ${AWS::StackName}-myReportingFunction
-      Description: !Sub
-        - Stack ${StackTagName} Environment ${EnvironmentTagName} myReportingFunction ${ResourceName}
-        - ResourceName: myReportingFunction2
-      CodeUri: src/myReportingFunction
-      Handler: index.handler
-      Runtime: nodejs8.10
-      MemorySize: 128
-      Timeout: 30
-      Tracing: Active
-      Policies:
-        - AWSXrayWriteOnlyAccess
-        - AWSLambdaENIManagementAccess
-        - AWSSecretsManagerGetSecretValuePolicy:
-            SecretArn: !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/${EnvironmentTagName}/*
-      Events:
-        ApiGET:
-          Type: Api
-          Properties:
-            Path: /
-            Method: GET
-            RestApiId: !Ref Api
-      VpcConfig:
-        SecurityGroupIds:
-          - !If
-            - VirtualNetworkUseExistingResource
-            - !GetAtt VirtualNetworkExistingResource.DefaultSecurityGroup
-            - !GetAtt VirtualNetwork.DefaultSecurityGroup
-        SubnetIds:
-          - !If
-            - VirtualNetworkUseExistingResource
-            - !GetAtt VirtualNetworkExistingResource.PrivateSubnet1
-            - !Ref VirtualNetworkPrivateSubnet1
-          - !If
-            - VirtualNetworkUseExistingResource
-            - !GetAtt VirtualNetworkExistingResource.PrivateSubnet2
-            - !Ref VirtualNetworkPrivateSubnet2
-      Environment:
-        Variables:
-          DB_INSTANCE: !If
-            - DatabaseUseExistingResource
-            - !Ref DatabaseExistingResource
-            - !Ref Database
-          DB_ADDRESS: !If
-            - DatabaseUseExistingResource
-            - !GetAtt DatabaseExistingResource.Endpoint.Address
-            - !GetAtt Database.Endpoint.Address
-          DB_PORT: !If
-            - DatabaseUseExistingResource
-            - !GetAtt DatabaseExistingResource.Endpoint.Port
-            - !GetAtt Database.Endpoint.Port
-          DB_ARN: !If
-            - DatabaseUseExistingResource
-            - !Sub arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${DatabaseExistingResource}
-            - !Sub arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${Database}
-          SECRETS_NAMESPACE: !Sub /${EnvironmentTagName}/
-  Api:
+      QueueName: !Sub ${AWS::StackName}-Queue
+  Stream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      Name: !Sub ${AWS::StackName}-Stream
+      ShardCount: 1
+      StreamEncryption:
+        EncryptionType: KMS
+        KeyId: alias/aws/kinesis
+  PhotosApi:
     Type: AWS::Serverless::Api
     Properties:
       Name: !Sub
         - ${ResourceName} From Stack ${StackTagName} Environment ${EnvironmentTagName}
-        - ResourceName: Api
+        - ResourceName: PhotosApi
       StageName: !Ref EnvironmentAPIGatewayStageName
       DefinitionBody:
         swagger: '2.0'
         info: {}
         paths:
-          /:
+          photos/{id}:
+            put:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MonoAPI.Arn}/invocations
+              responses: {}
             get:
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
-                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${myReportingFunction2.Arn}/invocations
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MonoAPI.Arn}/invocations
+              responses: {}
+            delete:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MonoAPI.Arn}/invocations
+              responses: {}
+          photos:
+            post:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MonoAPI.Arn}/invocations
+              responses: {}
+          /photos:
+            get:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Function.Arn}/invocations
               responses: {}
       EndpointConfiguration: REGIONAL
-  VirtualNetwork:
-    Type: AWS::EC2::VPC
+  Function:
+    Type: AWS::Serverless::Function
     Properties:
-      CidrBlock: 10.0.0.0/16
-      Tags:
-        - Key: Name
-          Value: !Sub
-            - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName}
-            - ResourceName: VirtualNetwork
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPrivateSubnet1:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::Subnet
+      FunctionName: !Sub ${AWS::StackName}-Function
+      Description: !Sub
+        - Stack ${StackTagName} Environment ${EnvironmentTagName} Function ${ResourceName}
+        - ResourceName: Function
+      CodeUri: src/Function
+      Handler: index.handler
+      Runtime: nodejs8.10
+      MemorySize: 3008
+      Timeout: 30
+      Tracing: Active
+      Policies:
+        - AWSXrayWriteOnlyAccess
+      Events:
+        PhotosApiGETphotos:
+          Type: Api
+          Properties:
+            Path: /photos
+            Method: GET
+            RestApiId: !Ref PhotosApi
+  MonoAPI:
+    Type: AWS::Serverless::Function
     Properties:
-      AvailabilityZone: !Select
-        - 0
-        - !GetAZs ''
-      CidrBlock: !Select
-        - 0
-        - !Cidr
-          - 10.0.0.0/16
-          - 4
-          - 14
-      Tags:
-        - Key: Name
-          Value: !Sub
-            - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Private Subnet 1
-            - ResourceName: VirtualNetwork
-      VpcId: !Ref VirtualNetwork
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPrivateSubnet2:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::Subnet
+      FunctionName: !Sub ${AWS::StackName}-MonoAPI
+      Description: !Sub
+        - Stack ${StackTagName} Environment ${EnvironmentTagName} Function ${ResourceName}
+        - ResourceName: MonoAPI
+      CodeUri: src/MonoAPI
+      Handler: index.handler
+      Runtime: nodejs8.10
+      MemorySize: 3008
+      Timeout: 60
+      Tracing: Active
+      Policies:
+        - AWSXrayWriteOnlyAccess
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Table
+        - KinesisCrudPolicy:
+            StreamName: !Ref Stream
+        - KinesisStreamReadPolicy:
+            StreamName: !Ref Stream
+      Events:
+        PhotosApiGETphotosid:
+          Type: Api
+          Properties:
+            Path: photos/{id}
+            Method: GET
+            RestApiId: !Ref PhotosApi
+        PhotosApiPUTphotosid:
+          Type: Api
+          Properties:
+            Path: photos/{id}
+            Method: PUT
+            RestApiId: !Ref PhotosApi
+        PhotosApiDELETEphotosid:
+          Type: Api
+          Properties:
+            Path: photos/{id}
+            Method: DELETE
+            RestApiId: !Ref PhotosApi
+        PhotosApiPOSTphotos:
+          Type: Api
+          Properties:
+            Path: photos
+            Method: POST
+            RestApiId: !Ref PhotosApi
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref Table
+          TABLE_ARN: !GetAtt Table.Arn
+          STREAM_NAME: !Ref Stream
+          STREAM_ARN: !GetAtt Stream.Arn
+  Table:
+    Type: AWS::DynamoDB::Table
     Properties:
-      AvailabilityZone: !Select
-        - 1
-        - !GetAZs ''
-      CidrBlock: !Select
-        - 1
-        - !Cidr
-          - 10.0.0.0/16
-          - 4
-          - 14
-      Tags:
-        - Key: Name
-          Value: !Sub
-            - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Private Subnet 2
-            - ResourceName: VirtualNetwork
-      VpcId: !Ref VirtualNetwork
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPublicSubnet1:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::Subnet
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      TableName: !Sub ${AWS::StackName}-Table
+  Function2:
+    Type: AWS::Serverless::Function
     Properties:
-      AvailabilityZone: !Select
-        - 0
-        - !GetAZs ''
-      CidrBlock: !Select
-        - 2
-        - !Cidr
-          - 10.0.0.0/16
-          - 4
-          - 14
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub
-            - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Public Subnet 1
-            - ResourceName: VirtualNetwork
-      VpcId: !Ref VirtualNetwork
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPublicSubnet2:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::Subnet
-    Properties:
-      AvailabilityZone: !Select
-        - 1
-        - !GetAZs ''
-      CidrBlock: !Select
-        - 3
-        - !Cidr
-          - 10.0.0.0/16
-          - 4
-          - 14
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub
-            - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Public Subnet 2
-            - ResourceName: VirtualNetwork
-      VpcId: !Ref VirtualNetwork
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPrivateSubnet1NatGatewayEIP:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::EIP
-    Properties:
-      Domain: vpc
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPrivateSubnet1NatGateway:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt VirtualNetworkPrivateSubnet1NatGatewayEIP.AllocationId
-      SubnetId: !Ref VirtualNetworkPublicSubnet1
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPrivateSubnet1RouteTable:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::RouteTable
-    Properties:
-      Tags:
-        - Key: Name
-          Value: !Sub
-            - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Private Subnet 1 Route Table
-            - ResourceName: VirtualNetwork
-      VpcId: !Ref VirtualNetwork
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPrivateSubnet1NatGatewayRoute:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::Route
-    Properties:
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref VirtualNetworkPrivateSubnet1NatGateway
-      RouteTableId: !Ref VirtualNetworkPrivateSubnet1RouteTable
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPrivateSubnet1RouteTableAssociation:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref VirtualNetworkPrivateSubnet1RouteTable
-      SubnetId: !Ref VirtualNetworkPrivateSubnet1
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPrivateSubnet2NatGatewayEIP:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::EIP
-    Properties:
-      Domain: vpc
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPrivateSubnet2NatGateway:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt VirtualNetworkPrivateSubnet2NatGatewayEIP.AllocationId
-      SubnetId: !Ref VirtualNetworkPublicSubnet2
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPrivateSubnet2RouteTable:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::RouteTable
-    Properties:
-      Tags:
-        - Key: Name
-          Value: !Sub
-            - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Private Subnet 2 Route Table
-            - ResourceName: VirtualNetwork
-      VpcId: !Ref VirtualNetwork
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPrivateSubnet2NatGatewayRoute:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::Route
-    Properties:
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref VirtualNetworkPrivateSubnet2NatGateway
-      RouteTableId: !Ref VirtualNetworkPrivateSubnet2RouteTable
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPrivateSubnet2RouteTableAssociation:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref VirtualNetworkPrivateSubnet2RouteTable
-      SubnetId: !Ref VirtualNetworkPrivateSubnet2
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPublicSubnetsInternetGateway:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::InternetGateway
-    Properties:
-      Tags:
-        - Key: Name
-          Value: !Sub
-            - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Public Subnets Internet Gateway
-            - ResourceName: VirtualNetwork
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPublicSubnetsInternetGatewayAttachment:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::VPCGatewayAttachment
-    Properties:
-      InternetGatewayId: !Ref VirtualNetworkPublicSubnetsInternetGateway
-      VpcId: !Ref VirtualNetwork
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPublicSubnetsRouteTable:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::RouteTable
-    Properties:
-      Tags:
-        - Key: Name
-          Value: !Sub
-            - Stack ${StackTagName} Environment ${EnvironmentTagName} Virtual Network ${ResourceName} Public Subnets Route Table
-            - ResourceName: VirtualNetwork
-      VpcId: !Ref VirtualNetwork
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPublicSubnetsInternetGatewayRoute:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::Route
-    Properties:
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref VirtualNetworkPublicSubnetsInternetGateway
-      RouteTableId: !Ref VirtualNetworkPublicSubnetsRouteTable
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPublicSubnet1RouteTableAssociation:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref VirtualNetworkPublicSubnetsRouteTable
-      SubnetId: !Ref VirtualNetworkPublicSubnet1
-    Condition: VirtualNetworkCreateNewResource
-  VirtualNetworkPublicSubnet2RouteTableAssociation:
-    Metadata:
-      StackeryManaged: true
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref VirtualNetworkPublicSubnetsRouteTable
-      SubnetId: !Ref VirtualNetworkPublicSubnet2
-    Condition: VirtualNetworkCreateNewResource
-  Database:
-    Type: AWS::RDS::DBInstance
-    Properties:
-      AllocatedStorage: '5'
-      AllowMajorVersionUpgrade: true
-      AutoMinorVersionUpgrade: true
-      BackupRetentionPeriod: '0'
-      CopyTagsToSnapshot: true
-      DBInstanceClass: db.t2.micro
-      DBSubnetGroupName: !Ref DatabaseSubnetGroup
-      Engine: mariadb
-      EngineVersion: '10.2'
-      MasterUsername: root
-      MasterUserPassword: ''
-      MultiAZ: false
-      PubliclyAccessible: false
-      StorageType: gp2
-      Tags:
-        - Key: Name
-          Value: !Sub
-            - Stack ${StackTagName} Environment ${EnvironmentTagName} Database ${ResourceName}
-            - ResourceName: Database
-      VPCSecurityGroups:
-        - !Ref DatabaseSecurityGroup
-    Condition: DatabaseCreateNewResource
-  DatabaseSubnetGroup:
-    Type: AWS::RDS::DBSubnetGroup
-    Properties:
-      DBSubnetGroupDescription: !Sub
-        - Stack ${StackTagName} Environment ${EnvironmentTagName} Database ${ResourceName} VPC Subnets
-        - ResourceName: Database
-      SubnetIds:
-        - !If
-          - VirtualNetworkUseExistingResource
-          - !GetAtt VirtualNetworkExistingResource.PrivateSubnet1
-          - !Ref VirtualNetworkPrivateSubnet1
-        - !If
-          - VirtualNetworkUseExistingResource
-          - !GetAtt VirtualNetworkExistingResource.PrivateSubnet2
-          - !Ref VirtualNetworkPrivateSubnet2
-      Tags:
-        - Key: Name
-          Value: !Sub
-            - Stack ${StackTagName} Environment ${EnvironmentTagName} Database ${ResourceName} VPC Subnets
-            - ResourceName: Database
-    Condition: DatabaseCreateNewResource
-  DatabaseSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Database Security Group
-      SecurityGroupIngress:
-        CidrIp: 0.0.0.0/0
-        FromPort: 3306
-        IpProtocol: tcp
-        ToPort: 3306
-      Tags:
-        - Key: Name
-          Value: !Sub
-            - Stack ${StackTagName} Environment ${EnvironmentTagName} Database ${ResourceName} VPC Security Group
-            - ResourceName: Database
-      VpcId: !If
-        - VirtualNetworkUseExistingResource
-        - !Ref VirtualNetworkExistingResource
-        - !Ref VirtualNetwork
-    Condition: DatabaseCreateNewResource
-  DatabaseExistingResource:
-    Type: Custom::StackeryExistingResource
-    Properties:
-      ServiceToken: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stackery-agent-commander
-      Type: database
-      Data: !Ref EnvConfigDBARNAsString
-    Condition: DatabaseUseExistingResource
-  VirtualNetworkExistingResource:
-    Type: Custom::StackeryExistingResource
-    Properties:
-      ServiceToken: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stackery-agent-commander
-      Type: virtualNetwork
-      Data: !Ref EnvConfigVPCConfigAsString
-    Condition: VirtualNetworkUseExistingResource
+      FunctionName: !Sub ${AWS::StackName}-Function2
+      Description: !Sub
+        - Stack ${StackTagName} Environment ${EnvironmentTagName} Function ${ResourceName}
+        - ResourceName: Function2
+      CodeUri: src/Function2
+      Handler: index.handler
+      Runtime: nodejs8.10
+      MemorySize: 3008
+      Timeout: 30
+      Tracing: Active
+      Policies:
+        - AWSXrayWriteOnlyAccess
+        - SQSSendMessagePolicy:
+            QueueName: !Ref Queue
+      Events:
+        Stream:
+          Type: Kinesis
+          Properties:
+            Stream: !GetAtt Stream.Arn
+            StartingPosition: TRIM_HORIZON
+            BatchSize: 1
+      Environment:
+        Variables:
+          QUEUE_NAME: !GetAtt Queue.QueueName
+          QUEUE_ARN: !GetAtt Queue.Arn
+          QUEUE_URL: !Ref Queue
 Parameters:
   StackTagName:
     Type: String
@@ -408,24 +184,3 @@ Parameters:
   EnvironmentAPIGatewayStageName:
     Type: String
     Description: Environment name used for API Gateway Stage names (injected by Stackery at deployment time)
-  EnvConfigDBARNAsString:
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /<EnvironmentName>/DB_ARN
-  EnvConfigVPCConfigAsString:
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /<EnvironmentName>/VPC_Config
-Conditions:
-  DatabaseCreateNewResource: !Equals
-    - 'false'
-    - !Ref EnvConfigDBARNAsString
-  DatabaseUseExistingResource: !Not
-    - Condition: DatabaseCreateNewResource
-  VirtualNetworkCreateNewResource: !Equals
-    - 'false'
-    - !Ref EnvConfigVPCConfigAsString
-  VirtualNetworkUseExistingResource: !Not
-    - Condition: VirtualNetworkCreateNewResource
-Metadata:
-  EnvConfigParameters:
-    EnvConfigDBARNAsString: DB_ARN
-    EnvConfigVPCConfigAsString: VPC_Config
