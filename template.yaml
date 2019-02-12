@@ -90,8 +90,8 @@ Resources:
       CodeUri: src/MonoAPI
       Handler: index.handler
       Runtime: nodejs8.10
-      MemorySize: 3008
-      Timeout: 60
+      MemorySize: 1580
+      Timeout: 30
       Tracing: Active
       Policies:
         - AWSXrayWriteOnlyAccess
